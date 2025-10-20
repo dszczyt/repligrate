@@ -1,9 +1,9 @@
-use crate::schema::{ChangeType, SchemaChange};
+use crate::schema::{ ChangeType, SchemaChange };
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde::{ Deserialize, Serialize };
+use serde_json::{ json, Value };
 use std::path::PathBuf;
-use tracing::{debug, info};
+use tracing::{ debug, info };
 
 /// Represents a pgroll migration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,10 +34,7 @@ pub struct MigrationGenerator;
 
 impl MigrationGenerator {
     /// Generate a pgroll migration from schema changes
-    pub fn generate(
-        migration_name: String,
-        changes: Vec<SchemaChange>,
-    ) -> Result<PgrollMigration> {
+    pub fn generate(migration_name: String, changes: Vec<SchemaChange>) -> Result<PgrollMigration> {
         let mut migration = PgrollMigration::new(migration_name);
 
         for change in changes {
@@ -51,27 +48,15 @@ impl MigrationGenerator {
     /// Convert a single schema change to a pgroll operation
     fn schema_change_to_operation(change: &SchemaChange) -> Result<Value> {
         match change.change_type {
-            ChangeType::CreateTable => {
-                Self::create_table_operation(change)
-            }
-            ChangeType::DropTable => {
-                Self::drop_table_operation(change)
-            }
-            ChangeType::AddColumn => {
-                Self::add_column_operation(change)
-            }
-            ChangeType::DropColumn => {
-                Self::drop_column_operation(change)
-            }
-            ChangeType::AlterTable => {
-                Self::alter_table_operation(change)
-            }
-            ChangeType::CreateIndex => {
-                Self::create_index_operation(change)
-            }
-            ChangeType::DropIndex => {
-                Self::drop_index_operation(change)
-            }
+            ChangeType::CreateTable => { Self::create_table_operation(change) }
+            ChangeType::DropTable => { Self::drop_table_operation(change) }
+            ChangeType::AddColumn => { Self::add_column_operation(change) }
+            ChangeType::DropColumn => { Self::drop_column_operation(change) }
+            ChangeType::AlterTable => { Self::alter_table_operation(change) }
+            ChangeType::AddConstraint => { Self::add_constraint_operation(change) }
+            ChangeType::DropConstraint => { Self::drop_constraint_operation(change) }
+            ChangeType::CreateIndex => { Self::create_index_operation(change) }
+            ChangeType::DropIndex => { Self::drop_index_operation(change) }
             _ => {
                 debug!("Unsupported change type: {:?}", change.change_type);
                 Ok(json!({}))
@@ -80,24 +65,29 @@ impl MigrationGenerator {
     }
 
     fn create_table_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "create_table": {
                 "name": change.object_name,
                 "columns": []
             }
-        }))
+        })
+        )
     }
 
     fn drop_table_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "drop_table": {
                 "name": change.object_name
             }
-        }))
+        })
+        )
     }
 
     fn add_column_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "add_column": {
                 "table": change.object_name,
                 "column": {
@@ -105,43 +95,104 @@ impl MigrationGenerator {
                     "type": "text"
                 }
             }
-        }))
+        })
+        )
     }
 
     fn drop_column_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "drop_column": {
                 "table": change.object_name,
                 "column": "column_name"
             }
-        }))
+        })
+        )
     }
 
     fn alter_table_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "raw_sql": {
                 "up": change.details.sql.clone(),
                 "down": format!("-- Rollback for: {}", change.details.sql)
             }
-        }))
+        })
+        )
     }
 
     fn create_index_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "raw_sql": {
                 "up": change.details.sql.clone(),
                 "down": format!("DROP INDEX IF EXISTS {}", change.object_name)
             }
-        }))
+        })
+        )
     }
 
     fn drop_index_operation(change: &SchemaChange) -> Result<Value> {
-        Ok(json!({
+        Ok(
+            json!({
             "raw_sql": {
                 "up": change.details.sql.clone(),
                 "down": format!("-- Recreate index: {}", change.object_name)
             }
-        }))
+        })
+        )
+    }
+
+    fn add_constraint_operation(change: &SchemaChange) -> Result<Value> {
+        Ok(
+            json!({
+            "raw_sql": {
+                "up": change.details.sql.clone(),
+                "down": Self::generate_drop_constraint_sql(change)
+            }
+        })
+        )
+    }
+
+    fn drop_constraint_operation(change: &SchemaChange) -> Result<Value> {
+        Ok(
+            json!({
+            "raw_sql": {
+                "up": change.details.sql.clone(),
+                "down": format!("-- Recreate constraint: {}", change.object_name)
+            }
+        })
+        )
+    }
+
+    fn generate_drop_constraint_sql(change: &SchemaChange) -> String {
+        // Extract constraint name from the SQL
+        let sql = &change.details.sql;
+        if let Some(constraint_name) = Self::extract_constraint_name(sql) {
+            format!(
+                "ALTER TABLE {} DROP CONSTRAINT IF EXISTS {}",
+                change.object_name,
+                constraint_name
+            )
+        } else {
+            format!("-- Unable to generate rollback for: {}", sql)
+        }
+    }
+
+    fn extract_constraint_name(sql: &str) -> Option<String> {
+        let sql_upper = sql.to_uppercase();
+        if let Some(idx) = sql_upper.find("CONSTRAINT") {
+            let after_constraint = &sql[idx + 10..].trim();
+            // Get the first word after CONSTRAINT (the constraint name)
+            if let Some(space_idx) = after_constraint.find(|c: char| c.is_whitespace()) {
+                let name = &after_constraint[..space_idx];
+                return Some(name.trim_matches(|c| (c == '"' || c == '`')).to_string());
+            } else {
+                // No space found, might be at the end
+                return Some(after_constraint.trim_matches(|c| (c == '"' || c == '`')).to_string());
+            }
+        }
+        None
     }
 }
 
@@ -187,4 +238,3 @@ impl MigrationWriter {
         Ok(migrations)
     }
 }
-

@@ -1,7 +1,9 @@
 use crate::config::Config;
 use crate::db::DbConnection;
 use crate::migration::{ MigrationGenerator, MigrationWriter };
+use crate::optimizer::MigrationOptimizer;
 use crate::schema::{ SchemaChange, SchemaChangeParser };
+use crate::state::ListenerState;
 use anyhow::Result;
 use tracing::{ debug, info, warn };
 
@@ -11,6 +13,7 @@ pub struct ReplicationListener {
     slot_name: String,
     publication_name: String,
     db: DbConnection,
+    state: ListenerState,
 }
 
 impl ReplicationListener {
@@ -24,6 +27,7 @@ impl ReplicationListener {
             slot_name,
             publication_name,
             db,
+            state: ListenerState::new(),
         })
     }
 
@@ -43,6 +47,7 @@ impl ReplicationListener {
         self.db.create_publication(&self.publication_name, table_list)?;
 
         info!("Replication setup complete. Listening for changes...");
+        info!("Press Ctrl+C to stop, or use pause/continue commands");
 
         // Collect schema changes
         let mut schema_changes: Vec<SchemaChange> = Vec::new();
@@ -55,6 +60,13 @@ impl ReplicationListener {
         // Simulate receiving changes
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+            // Check if paused
+            if self.state.is_paused() {
+                debug!("Listener is paused, skipping message processing");
+            } else {
+                debug!("Listener is active, processing messages");
+            }
 
             // In production, this would receive actual replication messages
             // For now, we just wait for interrupt
@@ -83,17 +95,41 @@ impl ReplicationListener {
 
     /// Generate migration from collected changes
     pub fn generate_migration(&self, changes: Vec<SchemaChange>) -> Result<()> {
+        // Prevent migration generation when paused
+        if self.state.is_paused() {
+            warn!("Cannot generate migration: listener is paused");
+            return Ok(());
+        }
+
         if changes.is_empty() {
             warn!("No schema changes detected");
             return Ok(());
         }
 
+        // Optimize changes by merging related operations
+        let optimized_changes = MigrationOptimizer::optimize(changes);
+
         let migration_name = format!("migration_{}", chrono::Local::now().format("%Y%m%d_%H%M%S"));
-        let migration = MigrationGenerator::generate(migration_name, changes)?;
+        let migration = MigrationGenerator::generate(migration_name, optimized_changes)?;
 
         MigrationWriter::write(&migration, &self.config.output_dir)?;
 
         Ok(())
+    }
+
+    /// Pause the replication listener
+    pub fn pause(&self) {
+        self.state.pause();
+    }
+
+    /// Continue the replication listener
+    pub fn continue_listening(&self) {
+        self.state.continue_listening();
+    }
+
+    /// Get the current listener state
+    pub fn get_state(&self) -> &ListenerState {
+        &self.state
     }
 
     /// Cleanup replication resources

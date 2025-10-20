@@ -55,6 +55,20 @@ pub enum Commands {
     /// Show current replication status
     Status,
 
+    /// Pause the replication listener
+    Pause {
+        /// Replication slot name
+        #[arg(long, default_value = "repligrate_slot")]
+        slot_name: String,
+    },
+
+    /// Continue the replication listener
+    Continue {
+        /// Replication slot name
+        #[arg(long, default_value = "repligrate_slot")]
+        slot_name: String,
+    },
+
     /// Clean up replication slot
     Cleanup {
         /// Replication slot name
@@ -97,6 +111,26 @@ pub async fn run(args: Args) -> Result<()> {
             info!("Checking replication status");
             // TODO: Implement status check
             println!("Status check not yet implemented");
+        }
+        Commands::Pause { slot_name: _ } => {
+            info!("Pause command received");
+            println!(
+                "Note: Pause/Unpause commands require the listener to be running in another process"
+            );
+            println!(
+                "Use a signal handler or IPC mechanism to communicate with the running listener"
+            );
+            println!("For now, you can use Ctrl+C to stop the listener");
+        }
+        Commands::Continue { slot_name: _ } => {
+            info!("Continue command received");
+            println!(
+                "Note: Pause/Continue commands require the listener to be running in another process"
+            );
+            println!(
+                "Use a signal handler or IPC mechanism to communicate with the running listener"
+            );
+            println!("For now, you can use Ctrl+C to stop the listener");
         }
         Commands::Cleanup { slot_name } => {
             info!("Cleaning up replication slot: {}", slot_name);

@@ -2,8 +2,10 @@ mod cli;
 mod config;
 mod db;
 mod migration;
+mod optimizer;
 mod replication;
 mod schema;
+mod state;
 mod wal;
 
 use anyhow::Result;

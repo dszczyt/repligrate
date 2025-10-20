@@ -8,6 +8,9 @@
 - 📝 **pgroll Migration Generation**: Automatically converts detected schema changes into pgroll migration JSON format
 - 🔄 **Logical Replication**: Uses PostgreSQL's native logical replication mechanism for reliable change capture
 - 🛡️ **Zero-Downtime Ready**: Generated migrations are compatible with pgroll's zero-downtime migration approach
+- ⏸️ **Pause/Continue**: Temporarily pause change detection without stopping the application
+- 🔧 **Constraint Support**: Full support for ADD/DROP CONSTRAINT operations (PRIMARY KEY, UNIQUE, FOREIGN KEY, etc.)
+- ⚡ **Migration Optimization**: Automatically merges related schema changes to reduce migration count
 - 🎯 **Selective Monitoring**: Filter which schemas and tables to monitor
 - 📦 **Easy Integration**: Simple CLI interface for integration into CI/CD pipelines
 
@@ -145,6 +148,26 @@ Check replication status:
 repligrate status
 ```
 
+### pause
+
+Pause the replication listener:
+
+```bash
+repligrate pause --slot-name repligrate_slot
+```
+
+This temporarily stops processing schema changes without stopping the application. Useful for maintenance windows or reducing load.
+
+### continue
+
+Continue the replication listener:
+
+```bash
+repligrate continue --slot-name repligrate_slot
+```
+
+Resume processing schema changes after a pause.
+
 ### cleanup
 
 Clean up replication resources:
@@ -171,10 +194,19 @@ Repligrate currently supports the following schema change operations:
 - ✅ ADD COLUMN
 - ✅ DROP COLUMN
 - ✅ MODIFY COLUMN
+- ✅ ADD CONSTRAINT (PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK)
+- ✅ DROP CONSTRAINT
 - ✅ CREATE INDEX
 - ✅ DROP INDEX
-- ⏳ ADD CONSTRAINT
-- ⏳ DROP CONSTRAINT
+
+## Migration Optimization
+
+Repligrate automatically optimizes migrations by merging related schema changes:
+
+- **Consecutive ADD COLUMN operations** are merged into a single ALTER TABLE statement
+- **Consecutive ADD CONSTRAINT operations** are merged into a single ALTER TABLE statement
+- **Consecutive ALTER TABLE operations** are merged when possible
+- **Rollback SQL** is automatically generated for constraint operations
 
 ## How It Works
 
