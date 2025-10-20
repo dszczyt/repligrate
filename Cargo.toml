@@ -1,0 +1,26 @@
+[package]
+name = "repligrate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+postgres = { version = "0.19", features = ["with-serde_json-1", "with-uuid-1"] }
+postgres-protocol = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+lazy_static = "1.4"
+config = "0.13"
+dotenv = "0.15"
+bytes = "1.5"
+futures = "0.3"
+async-trait = "0.1"
+toml = "0.8"
