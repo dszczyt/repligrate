@@ -1,11 +1,11 @@
-use crate::schema::{ ChangeType, SchemaChange };
-use serde_json::{ json, Value };
+use crate::schema::{ChangeType, SchemaChange};
 use std::collections::HashMap;
-use tracing::{ debug, info };
+use tracing::{debug, info};
 
 /// Optimizes migrations by merging related schema changes
 pub struct MigrationOptimizer;
 
+#[allow(dead_code)]
 impl MigrationOptimizer {
     /// Optimize a list of schema changes by merging related operations
     /// while preserving the correct migration semantics
@@ -22,7 +22,7 @@ impl MigrationOptimizer {
         // Group changes by table
         for change in changes {
             let key = format!("{}.{}", change.schema_name, change.object_name);
-            pending_changes.entry(key).or_insert_with(Vec::new).push(change);
+            pending_changes.entry(key).or_default().push(change);
         }
 
         // Process each group of changes
@@ -73,10 +73,9 @@ impl MigrationOptimizer {
                 let mut j = i + 1;
 
                 // Collect consecutive ALTER TABLE operations on the same table
-                while
-                    j < changes.len() &&
-                    changes[j].change_type == ChangeType::AlterTable &&
-                    changes[j].object_name == current.object_name
+                while j < changes.len()
+                    && changes[j].change_type == ChangeType::AlterTable
+                    && changes[j].object_name == current.object_name
                 {
                     merged_alters.push(changes[j].clone());
                     j += 1;
@@ -97,10 +96,9 @@ impl MigrationOptimizer {
                 let mut j = i + 1;
 
                 // Collect consecutive ADD CONSTRAINT operations on the same table
-                while
-                    j < changes.len() &&
-                    changes[j].change_type == ChangeType::AddConstraint &&
-                    changes[j].object_name == current.object_name
+                while j < changes.len()
+                    && changes[j].change_type == ChangeType::AddConstraint
+                    && changes[j].object_name == current.object_name
                 {
                     merged_constraints.push(changes[j].clone());
                     j += 1;
@@ -138,11 +136,9 @@ impl MigrationOptimizer {
             .filter_map(|change| {
                 // Extract the ADD COLUMN part from each SQL statement
                 let sql = &change.details.sql;
-                if let Some(add_col_idx) = sql.to_uppercase().find("ADD COLUMN") {
-                    Some(sql[add_col_idx..].to_string())
-                } else {
-                    None
-                }
+                sql.to_uppercase()
+                    .find("ADD COLUMN")
+                    .map(|add_col_idx| sql[add_col_idx..].to_string())
             })
             .collect();
 
@@ -172,7 +168,7 @@ impl MigrationOptimizer {
                 // Extract the ALTER clause (everything after ALTER TABLE tablename)
                 if let Some(alter_idx) = sql.to_uppercase().find("ALTER TABLE") {
                     let after_table = &sql[alter_idx + 11..]; // Skip "ALTER TABLE"
-                    // Skip the table name
+                                                              // Skip the table name
                     if let Some(space_idx) = after_table.find(|c: char| c.is_whitespace()) {
                         let clause = after_table[space_idx..].trim();
                         if !clause.is_empty() {
@@ -208,11 +204,9 @@ impl MigrationOptimizer {
             .filter_map(|change| {
                 let sql = &change.details.sql;
                 // Extract the ADD CONSTRAINT part from each SQL statement
-                if let Some(add_idx) = sql.to_uppercase().find("ADD CONSTRAINT") {
-                    Some(sql[add_idx..].to_string())
-                } else {
-                    None
-                }
+                sql.to_uppercase()
+                    .find("ADD CONSTRAINT")
+                    .map(|add_idx| sql[add_idx..].to_string())
             })
             .collect();
 
@@ -228,19 +222,19 @@ impl MigrationOptimizer {
     /// Check if two changes can be merged
     fn can_merge(change1: &SchemaChange, change2: &SchemaChange) -> bool {
         // Same table and compatible operations
-        change1.object_name == change2.object_name &&
-            Self::are_compatible_operations(&change1.change_type, &change2.change_type)
+        change1.object_name == change2.object_name
+            && Self::are_compatible_operations(&change1.change_type, &change2.change_type)
     }
 
     /// Check if two operation types are compatible for merging
     fn are_compatible_operations(type1: &ChangeType, type2: &ChangeType) -> bool {
         matches!(
             (type1, type2),
-            (ChangeType::AddColumn, ChangeType::AddColumn) |
-                (ChangeType::AlterTable, ChangeType::AlterTable) |
-                (ChangeType::DropColumn, ChangeType::DropColumn) |
-                (ChangeType::AddConstraint, ChangeType::AddConstraint) |
-                (ChangeType::DropConstraint, ChangeType::DropConstraint)
+            (ChangeType::AddColumn, ChangeType::AddColumn)
+                | (ChangeType::AlterTable, ChangeType::AlterTable)
+                | (ChangeType::DropColumn, ChangeType::DropColumn)
+                | (ChangeType::AddConstraint, ChangeType::AddConstraint)
+                | (ChangeType::DropConstraint, ChangeType::DropConstraint)
         )
     }
 }
@@ -256,14 +250,14 @@ mod tests {
                 ChangeType::AddColumn,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string()
+                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::AddColumn,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD COLUMN phone VARCHAR(20)".to_string()
-            )
+                "ALTER TABLE users ADD COLUMN phone VARCHAR(20)".to_string(),
+            ),
         ];
 
         let optimized = MigrationOptimizer::optimize(changes);
@@ -279,14 +273,14 @@ mod tests {
                 ChangeType::AddColumn,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string()
+                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::AddColumn,
                 "public".to_string(),
                 "orders".to_string(),
-                "ALTER TABLE orders ADD COLUMN status VARCHAR(50)".to_string()
-            )
+                "ALTER TABLE orders ADD COLUMN status VARCHAR(50)".to_string(),
+            ),
         ];
 
         let optimized = MigrationOptimizer::optimize(changes);
@@ -300,14 +294,14 @@ mod tests {
                 ChangeType::AlterTable,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id)".to_string()
+                "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::AlterTable,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD CONSTRAINT uk_email UNIQUE (email)".to_string()
-            )
+                "ALTER TABLE users ADD CONSTRAINT uk_email UNIQUE (email)".to_string(),
+            ),
         ];
 
         let optimized = MigrationOptimizer::optimize(changes);
@@ -321,20 +315,20 @@ mod tests {
                 ChangeType::CreateTable,
                 "public".to_string(),
                 "users".to_string(),
-                "CREATE TABLE users (id SERIAL PRIMARY KEY)".to_string()
+                "CREATE TABLE users (id SERIAL PRIMARY KEY)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::AddColumn,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string()
+                "ALTER TABLE users ADD COLUMN email VARCHAR(255)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::CreateIndex,
                 "public".to_string(),
                 "idx_users_email".to_string(),
-                "CREATE INDEX idx_users_email ON users(email)".to_string()
-            )
+                "CREATE INDEX idx_users_email ON users(email)".to_string(),
+            ),
         ];
 
         let optimized = MigrationOptimizer::optimize(changes);
@@ -348,14 +342,14 @@ mod tests {
                 ChangeType::AddConstraint,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id)".to_string()
+                "ALTER TABLE users ADD CONSTRAINT pk_users PRIMARY KEY (id)".to_string(),
             ),
             SchemaChange::new(
                 ChangeType::AddConstraint,
                 "public".to_string(),
                 "users".to_string(),
-                "ALTER TABLE users ADD CONSTRAINT uk_email UNIQUE (email)".to_string()
-            )
+                "ALTER TABLE users ADD CONSTRAINT uk_email UNIQUE (email)".to_string(),
+            ),
         ];
 
         let optimized = MigrationOptimizer::optimize(changes);

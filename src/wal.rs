@@ -1,8 +1,9 @@
 use anyhow::Result;
-use tracing::{debug, info};
+use tracing::debug;
 
 /// Represents a WAL (Write-Ahead Log) message
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct WalMessage {
     pub lsn: String,
     pub timestamp: i64,
@@ -13,6 +14,7 @@ pub struct WalMessage {
 /// Parser for WAL messages
 pub struct WalMessageParser;
 
+#[allow(dead_code)]
 impl WalMessageParser {
     /// Parse a WAL message string
     pub fn parse(message: &str) -> Result<Option<WalMessage>> {
@@ -112,7 +114,9 @@ mod tests {
     #[test]
     fn test_is_ddl() {
         assert!(WalMessageParser::is_ddl("CREATE TABLE users (id INT)"));
-        assert!(WalMessageParser::is_ddl("ALTER TABLE users ADD COLUMN name VARCHAR"));
+        assert!(WalMessageParser::is_ddl(
+            "ALTER TABLE users ADD COLUMN name VARCHAR"
+        ));
         assert!(!WalMessageParser::is_ddl("INSERT INTO users VALUES (1)"));
     }
 
@@ -123,4 +127,3 @@ mod tests {
         assert!(!WalMessageParser::is_dml("CREATE TABLE users (id INT)"));
     }
 }
-

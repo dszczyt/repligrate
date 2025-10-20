@@ -86,8 +86,7 @@ impl Config {
         let database_url = std::env::var("DATABASE_URL")
             .map_err(|_| anyhow!("DATABASE_URL environment variable not set"))?;
 
-        let output_dir = std::env::var("OUTPUT_DIR")
-            .unwrap_or_else(|_| "./migrations".to_string());
+        let output_dir = std::env::var("OUTPUT_DIR").unwrap_or_else(|_| "./migrations".to_string());
 
         Ok(Self {
             database_url,
@@ -116,4 +115,3 @@ impl Config {
         Ok(())
     }
 }
-

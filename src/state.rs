@@ -1,6 +1,6 @@
-use std::sync::atomic::{ AtomicBool, Ordering };
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tracing::{ info, debug };
+use tracing::info;
 
 /// Manages the pause/continue state of the replication listener
 #[derive(Clone)]
@@ -8,6 +8,7 @@ pub struct ListenerState {
     paused: Arc<AtomicBool>,
 }
 
+#[allow(dead_code)]
 impl ListenerState {
     /// Create a new listener state (initially unpaused)
     pub fn new() -> Self {
@@ -45,7 +46,11 @@ impl ListenerState {
 
     /// Get the current state as a string
     pub fn status(&self) -> &'static str {
-        if self.is_paused() { "PAUSED" } else { "LISTENING" }
+        if self.is_paused() {
+            "PAUSED"
+        } else {
+            "LISTENING"
+        }
     }
 }
 

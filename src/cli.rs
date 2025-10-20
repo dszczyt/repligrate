@@ -1,12 +1,12 @@
 use anyhow::Result;
-use clap::{ Parser, Subcommand };
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
 use crate::config::Config;
+use crate::migration::{MigrationGenerator, MigrationWriter};
 use crate::replication::ReplicationListener;
-use crate::migration::{ MigrationGenerator, MigrationWriter };
-use crate::schema::{ SchemaChange, ChangeType };
+use crate::schema::{ChangeType, SchemaChange};
 
 #[derive(Parser)]
 #[command(name = "repligrate")]
@@ -102,9 +102,14 @@ pub async fn run(args: Args) -> Result<()> {
     info!("Configuration loaded: {:?}", config);
 
     match args.command {
-        Commands::Listen { slot_name, publication_name, tables } => {
+        Commands::Listen {
+            slot_name,
+            publication_name,
+            tables,
+        } => {
             info!("Starting replication listener");
-            let mut listener = ReplicationListener::new(config, slot_name, publication_name).await?;
+            let mut listener =
+                ReplicationListener::new(config, slot_name, publication_name).await?;
             listener.listen(tables).await?;
         }
         Commands::Status => {
@@ -156,20 +161,20 @@ fn generate_test_migration(config: &Config) -> Result<()> {
             ChangeType::CreateTable,
             "public".to_string(),
             "users".to_string(),
-            "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL)".to_string()
+            "CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL)".to_string(),
         ),
         SchemaChange::new(
             ChangeType::AddColumn,
             "public".to_string(),
             "users".to_string(),
-            "ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE".to_string()
+            "ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE".to_string(),
         ),
         SchemaChange::new(
             ChangeType::CreateIndex,
             "public".to_string(),
             "idx_users_email".to_string(),
-            "CREATE INDEX idx_users_email ON users(email)".to_string()
-        )
+            "CREATE INDEX idx_users_email ON users(email)".to_string(),
+        ),
     ];
 
     info!("Generating migration from {} schema changes", changes.len());

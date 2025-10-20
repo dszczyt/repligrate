@@ -1,12 +1,13 @@
 use anyhow::Result;
 use postgres::Client;
-use tracing::{ debug, info };
+use tracing::{debug, info};
 
 /// Database connection manager
 pub struct DbConnection {
     client: Client,
 }
 
+#[allow(dead_code)]
 impl DbConnection {
     /// Create a new database connection
     pub fn new(database_url: &str) -> Result<Self> {
@@ -22,7 +23,7 @@ impl DbConnection {
         // Check if slot already exists
         let rows = self.client.query(
             "SELECT 1 FROM pg_replication_slots WHERE slot_name = $1",
-            &[&slot_name]
+            &[&slot_name],
         )?;
 
         if !rows.is_empty() {
@@ -32,8 +33,11 @@ impl DbConnection {
 
         // Create the slot
         self.client.execute(
-            &format!("SELECT * FROM pg_create_logical_replication_slot('{}', 'test_decoding')", slot_name),
-            &[]
+            &format!(
+                "SELECT * FROM pg_create_logical_replication_slot('{}', 'test_decoding')",
+                slot_name
+            ),
+            &[],
         )?;
 
         info!("Created replication slot: {}", slot_name);
@@ -44,14 +48,14 @@ impl DbConnection {
     pub fn create_publication(
         &mut self,
         pub_name: &str,
-        tables: Option<Vec<String>>
+        tables: Option<Vec<String>>,
     ) -> Result<()> {
         debug!("Creating publication: {}", pub_name);
 
         // Check if publication already exists
         let rows = self.client.query(
             "SELECT 1 FROM pg_publication WHERE pubname = $1",
-            &[&pub_name]
+            &[&pub_name],
         )?;
 
         if !rows.is_empty() {
@@ -80,7 +84,10 @@ impl DbConnection {
     pub fn drop_replication_slot(&mut self, slot_name: &str) -> Result<()> {
         debug!("Dropping replication slot: {}", slot_name);
 
-        self.client.execute(&format!("SELECT pg_drop_replication_slot('{}')", slot_name), &[])?;
+        self.client.execute(
+            &format!("SELECT pg_drop_replication_slot('{}')", slot_name),
+            &[],
+        )?;
 
         info!("Dropped replication slot: {}", slot_name);
         Ok(())
@@ -90,7 +97,8 @@ impl DbConnection {
     pub fn drop_publication(&mut self, pub_name: &str) -> Result<()> {
         debug!("Dropping publication: {}", pub_name);
 
-        self.client.execute(&format!("DROP PUBLICATION IF EXISTS {}", pub_name), &[])?;
+        self.client
+            .execute(&format!("DROP PUBLICATION IF EXISTS {}", pub_name), &[])?;
 
         info!("Dropped publication: {}", pub_name);
         Ok(())
@@ -98,7 +106,9 @@ impl DbConnection {
 
     /// Get the current LSN (Log Sequence Number)
     pub fn get_current_lsn(&mut self) -> Result<String> {
-        let row = self.client.query_one("SELECT pg_current_wal_lsn()::text", &[])?;
+        let row = self
+            .client
+            .query_one("SELECT pg_current_wal_lsn()::text", &[])?;
         let lsn: String = row.get(0);
         Ok(lsn)
     }
@@ -115,18 +125,17 @@ impl DbConnection {
         }
 
         let row = &rows[0];
-        Ok(
-            Some(SlotInfo {
-                slot_name: row.get(0),
-                slot_type: row.get(1),
-                datoid: row.get(2),
-                confirmed_flush_lsn: row.get(3),
-            })
-        )
+        Ok(Some(SlotInfo {
+            slot_name: row.get(0),
+            slot_type: row.get(1),
+            datoid: row.get(2),
+            confirmed_flush_lsn: row.get(3),
+        }))
     }
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SlotInfo {
     pub slot_name: String,
     pub slot_type: String,

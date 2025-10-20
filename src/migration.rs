@@ -48,15 +48,15 @@ impl MigrationGenerator {
     /// Convert a single schema change to a pgroll operation
     fn schema_change_to_operation(change: &SchemaChange) -> Result<Value> {
         match change.change_type {
-            ChangeType::CreateTable => { Self::create_table_operation(change) }
-            ChangeType::DropTable => { Self::drop_table_operation(change) }
-            ChangeType::AddColumn => { Self::add_column_operation(change) }
-            ChangeType::DropColumn => { Self::drop_column_operation(change) }
-            ChangeType::AlterTable => { Self::alter_table_operation(change) }
-            ChangeType::AddConstraint => { Self::add_constraint_operation(change) }
-            ChangeType::DropConstraint => { Self::drop_constraint_operation(change) }
-            ChangeType::CreateIndex => { Self::create_index_operation(change) }
-            ChangeType::DropIndex => { Self::drop_index_operation(change) }
+            ChangeType::CreateTable => Self::create_table_operation(change),
+            ChangeType::DropTable => Self::drop_table_operation(change),
+            ChangeType::AddColumn => Self::add_column_operation(change),
+            ChangeType::DropColumn => Self::drop_column_operation(change),
+            ChangeType::AlterTable => Self::alter_table_operation(change),
+            ChangeType::AddConstraint => Self::add_constraint_operation(change),
+            ChangeType::DropConstraint => Self::drop_constraint_operation(change),
+            ChangeType::CreateIndex => Self::create_index_operation(change),
+            ChangeType::DropIndex => Self::drop_index_operation(change),
             _ => {
                 debug!("Unsupported change type: {:?}", change.change_type);
                 Ok(json!({}))
@@ -180,16 +180,21 @@ impl MigrationGenerator {
     }
 
     fn extract_constraint_name(sql: &str) -> Option<String> {
+        #[allow(unused_parens)]
+        fn trim_quotes(s: &str) -> &str {
+            s.trim_matches(|c| (c == '"' || c == '`'))
+        }
+
         let sql_upper = sql.to_uppercase();
         if let Some(idx) = sql_upper.find("CONSTRAINT") {
             let after_constraint = &sql[idx + 10..].trim();
             // Get the first word after CONSTRAINT (the constraint name)
             if let Some(space_idx) = after_constraint.find(|c: char| c.is_whitespace()) {
                 let name = &after_constraint[..space_idx];
-                return Some(name.trim_matches(|c| (c == '"' || c == '`')).to_string());
+                return Some(trim_quotes(name).to_string());
             } else {
                 // No space found, might be at the end
-                return Some(after_constraint.trim_matches(|c| (c == '"' || c == '`')).to_string());
+                return Some(trim_quotes(after_constraint).to_string());
             }
         }
         None
@@ -199,6 +204,7 @@ impl MigrationGenerator {
 /// Migration file manager
 pub struct MigrationWriter;
 
+#[allow(dead_code)]
 impl MigrationWriter {
     /// Write migration to file
     pub fn write(migration: &PgrollMigration, output_dir: &PathBuf) -> Result<PathBuf> {
@@ -229,7 +235,7 @@ impl MigrationWriter {
         for entry in std::fs::read_dir(output_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "json") {
+            if path.extension().is_some_and(|ext| ext == "json") {
                 migrations.push(path);
             }
         }

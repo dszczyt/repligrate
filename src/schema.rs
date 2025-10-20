@@ -50,6 +50,7 @@ pub struct ConstraintInfo {
     pub definition: String,
 }
 
+#[allow(dead_code)]
 impl SchemaChange {
     pub fn new(
         change_type: ChangeType,
@@ -90,6 +91,7 @@ impl SchemaChange {
 /// Parser for SQL statements to extract schema changes
 pub struct SchemaChangeParser;
 
+#[allow(dead_code)]
 impl SchemaChangeParser {
     /// Parse SQL statement and extract schema change information
     pub fn parse(sql: &str) -> Option<(ChangeType, String)> {
@@ -128,21 +130,28 @@ impl SchemaChangeParser {
     }
 }
 
+#[allow(unused_parens)]
+fn trim_quotes(s: &str) -> &str {
+    s.trim_matches(|c| (c == '"' || c == '`'))
+}
+
+#[allow(dead_code)]
 fn extract_table_name(sql: &str) -> String {
     let parts: Vec<&str> = sql.split_whitespace().collect();
     for (i, part) in parts.iter().enumerate() {
         if part.to_uppercase() == "TABLE" && i + 1 < parts.len() {
-            return parts[i + 1].trim_matches(|c| (c == '"' || c == '`')).to_string();
+            return trim_quotes(parts[i + 1]).to_string();
         }
     }
     String::new()
 }
 
+#[allow(dead_code)]
 fn extract_index_name(sql: &str) -> String {
     let parts: Vec<&str> = sql.split_whitespace().collect();
     for (i, part) in parts.iter().enumerate() {
         if part.to_uppercase() == "INDEX" && i + 1 < parts.len() {
-            return parts[i + 1].trim_matches(|c| (c == '"' || c == '`')).to_string();
+            return trim_quotes(parts[i + 1]).to_string();
         }
     }
     String::new()

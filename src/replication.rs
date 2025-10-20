@@ -1,14 +1,15 @@
 use crate::config::Config;
 use crate::db::DbConnection;
-use crate::migration::{ MigrationGenerator, MigrationWriter };
+use crate::migration::{MigrationGenerator, MigrationWriter};
 use crate::optimizer::MigrationOptimizer;
-use crate::schema::{ SchemaChange, SchemaChangeParser };
+use crate::schema::{SchemaChange, SchemaChangeParser};
 use crate::state::ListenerState;
 use anyhow::Result;
-use tracing::{ debug, info, warn };
+use tracing::{debug, info, warn};
 
 /// Listens to PostgreSQL logical replication changes
 pub struct ReplicationListener {
+    #[allow(dead_code)]
     config: Config,
     slot_name: String,
     publication_name: String,
@@ -16,6 +17,7 @@ pub struct ReplicationListener {
     state: ListenerState,
 }
 
+#[allow(dead_code)]
 impl ReplicationListener {
     /// Create a new replication listener
     pub async fn new(config: Config, slot_name: String, publication_name: String) -> Result<Self> {
@@ -44,13 +46,14 @@ impl ReplicationListener {
 
         // Create replication slot and publication
         self.db.create_replication_slot(&self.slot_name)?;
-        self.db.create_publication(&self.publication_name, table_list)?;
+        self.db
+            .create_publication(&self.publication_name, table_list)?;
 
         info!("Replication setup complete. Listening for changes...");
         info!("Press Ctrl+C to stop, or use pause/continue commands");
 
         // Collect schema changes
-        let mut schema_changes: Vec<SchemaChange> = Vec::new();
+        let _schema_changes: Vec<SchemaChange> = Vec::new();
         let _change_count = 0;
 
         // In a real implementation, we would connect to the replication slot
@@ -83,7 +86,7 @@ impl ReplicationListener {
                 change_type,
                 "public".to_string(),
                 object_name,
-                message.to_string()
+                message.to_string(),
             );
 
             info!("Detected schema change: {:?}", schema_change.change_type);
