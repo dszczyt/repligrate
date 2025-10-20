@@ -42,6 +42,25 @@ cargo build --release
 
 The binary will be available at `target/release/repligrate`.
 
+### From GitHub Releases
+
+Download pre-built binaries from the [releases page](https://github.com/dszczyt/repligrate/releases):
+
+```bash
+# Linux (amd64)
+curl -LO https://github.com/dszczyt/repligrate/releases/latest/download/repligrate.linux.amd64
+chmod +x repligrate.linux.amd64
+sudo mv repligrate.linux.amd64 /usr/local/bin/repligrate
+
+# macOS (Apple Silicon)
+curl -LO https://github.com/dszczyt/repligrate/releases/latest/download/repligrate.macos.arm64
+chmod +x repligrate.macos.arm64
+sudo mv repligrate.macos.arm64 /usr/local/bin/repligrate
+
+# Windows (amd64)
+# Download from: https://github.com/dszczyt/repligrate/releases/latest/download/repligrate.win.amd64.exe
+```
+
 ## Quick Start
 
 ### 1. Initialize Replication
@@ -264,6 +283,14 @@ cargo doc --open
 - Complex migrations may require manual adjustment
 - Requires PostgreSQL 14.0+
 - Logical replication must be enabled
+
+## Versioning
+
+Repligrate follows [Semantic Versioning (SemVer)](https://semver.org/), the same as pgroll.
+
+- **Current version**: `v0.1.0`
+- **Version format**: `v{MAJOR}.{MINOR}.{PATCH}`
+- See [VERSIONING.md](VERSIONING.md) for detailed versioning guidelines
 
 ## Contributing
 
